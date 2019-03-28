@@ -2,6 +2,8 @@ import Vapor
 
 struct UsersController: RouteCollection {
     func boot(router: Router) throws {
+        // ...
+        router.post("api", "users", use: createHandler)
         let usersRoute = router.grouped("api", "users")
         usersRoute.post(use: createHandler)
         usersRoute.get(use: getAllHandler)

@@ -14,3 +14,9 @@ extension Category: SQLiteModel {}
 extension Category: Content {}
 extension Category: Migration {}
 extension Category: Parameter {}
+
+extension Category {
+    var reminders: Siblings<Category, Reminder, ReminderCategoryPivot> {
+        return siblings()
+    }
+}
