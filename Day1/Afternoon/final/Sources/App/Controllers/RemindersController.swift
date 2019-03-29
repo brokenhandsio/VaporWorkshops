@@ -10,11 +10,13 @@ struct RemindersController: RouteCollection {
         
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
         let protectedRoutes = remindersRoute.grouped(tokenAuthMiddleware)
-        protectedRoutes.post(Reminder.self, use: createHandler)
+        protectedRoutes.post(CreateReminderData.self, use: createHandler)
         protectedRoutes.post(Reminder.parameter, "categories", Category.parameter, use: addCategoriesHandler)
     }
     
-    func createHandler(_ req: Request, reminder: Reminder) throws -> Future<Reminder> {
+    func createHandler(_ req: Request, data: CreateReminderData) throws -> Future<Reminder> {
+        let user = try req.requireAuthenticated(User.self)
+        let reminder = try Reminder(title: data.title, userID: user.requireID())
         return reminder.save(on: req)
     }
     
@@ -43,4 +45,8 @@ struct RemindersController: RouteCollection {
             return try reminder.categories.query(on: req).all()
         }
     }
+}
+
+struct CreateReminderData: Content {
+    let title: String
 }

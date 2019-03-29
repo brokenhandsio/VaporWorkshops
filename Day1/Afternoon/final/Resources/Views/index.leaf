@@ -1,0 +1,18 @@
+#set("content") {
+<h1>Reminders</h1>
+
+#if(count(reminders) > 0) {
+    <table>
+        <thead><tr><th>Number</th><th>Title</th></thead>
+        <tbody>
+            #for(reminder in reminders) {
+            <tr><td>#(reminder.id)</td><td>#(reminder.title)</td></tr>
+            }
+        </tbody>
+    </table>
+    } else {
+    <h2>You haven't created any reminder yet!</h2>
+    }
+}
+
+#embed("base")
