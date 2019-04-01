@@ -30,5 +30,6 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     migrations.add(model: User.self, database: .sqlite)
     migrations.add(model: Reminder.self, database: .sqlite)
     migrations.add(model: Category.self, database: .sqlite)
+    migrations.add(model: ReminderCategoryPivot.self, database: .sqlite)
     services.register(migrations)
 }
