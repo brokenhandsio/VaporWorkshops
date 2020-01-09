@@ -11,6 +11,7 @@ struct UserController: RouteCollection {
         usersRoutes.delete(":userID", use: deleteHandler)
         usersRoutes.put(":userID", use: updateHandler)
         usersRoutes.get(":userID", "reminders", use: getRemindersHandler)
+        usersRoutes.get("reminders", use: getAllUsersWithRemindersEagerHandler)
     }
     
     func createHandler(req: Request) throws -> EventLoopFuture<User> {
@@ -52,5 +53,9 @@ struct UserController: RouteCollection {
                 return req.eventLoop.future(error: Abort(.internalServerError))
             }
         }
+    }
+    
+    func getAllUsersWithRemindersEagerHandler(req: Request) throws -> EventLoopFuture<[User]> {
+        User.query(on: req.db).with(\.$reminders).all()
     }
 }
