@@ -1,43 +1,53 @@
 import Vapor
+import Fluent
 
 struct RemindersController: RouteCollection {
-    func boot(router: Router) throws {
-        let remindersRoute = router.grouped("api", "reminders")
-        remindersRoute.post(Reminder.self, use: createHandler)
-        remindersRoute.get(use: getAllHandler)
-        remindersRoute.get(Reminder.parameter, use: getHandler)
-        remindersRoute.get(Reminder.parameter, "user", use: getUserHandler)
-        remindersRoute.post(Reminder.parameter, "categories", Category.parameter, use: addCategoriesHandler)
-        remindersRoute.get(Reminder.parameter, "categories", use: getCategoriesHandler)
+    
+    func boot(routes: RoutesBuilder) throws {
+        let remindersRoutes = routes.grouped("api", "reminders")
+        remindersRoutes.post(use: createHandler)
+        remindersRoutes.get(use: getAllHandler)
+        remindersRoutes.get(":reminderID", use: getHandler)
+        remindersRoutes.get(":reminderID", "user", use: getUserHandler)
+        remindersRoutes.post(":reminderID", "categories", ":categoryID", use: addCategoriesHandler)
+        remindersRoutes.get(":reminderID", "categories", use: getCategoriesHandler)
     }
     
-    func createHandler(_ req: Request, reminder: Reminder) throws -> Future<Reminder> {
-        return reminder.save(on: req)
+    func createHandler(req: Request) throws -> EventLoopFuture<Reminder> {
+        let reminderData = try req.content.decode(CreateReminderData.self)
+        let reminder = Reminder(title: reminderData.title, userID: reminderData.userID)
+        return reminder.save(on: req.db).map { reminder }
     }
     
-    func getAllHandler(_ req: Request) throws -> Future<[Reminder]> {
-        return Reminder.query(on: req).all()
+    func getAllHandler(req: Request) throws -> EventLoopFuture<[Reminder]> {
+        Reminder.query(on: req.db).all()
     }
     
-    func getHandler(_ req: Request) throws -> Future<Reminder> {
-        return try req.parameters.next(Reminder.self)
+    func getHandler(req: Request) throws -> EventLoopFuture<Reminder> {
+        Reminder.find(req.parameters.get("reminderID"), on: req.db).unwrap(or: Abort(.notFound))
     }
     
-    func getUserHandler(_ req: Request) throws -> Future<User> {
-        return try req.parameters.next(Reminder.self).flatMap(to: User.self) { reminder in
-            return reminder.user.get(on: req)
+    func getUserHandler(req: Request) throws -> EventLoopFuture<User> {
+        Reminder.find(req.parameters.get("reminderID"), on: req.db).unwrap(or: Abort(.notFound)).flatMap { reminder in
+            reminder.$user.get(on: req.db)
         }
     }
     
-    func addCategoriesHandler(_ req: Request) throws -> Future<HTTPStatus> {
-        return try flatMap(to: HTTPStatus.self, req.parameters.next(Reminder.self), req.parameters.next(Category.self)) { reminder, category in
-            return reminder.categories.attach(category, on: req).transform(to: .created)
+    func addCategoriesHandler(req: Request) throws -> EventLoopFuture<HTTPStatus> {
+        let reminderFetch = Reminder.find(req.parameters.get("reminderID"), on: req.db).unwrap(or: Abort(.notFound))
+        let categoryFetch = Category.find(req.parameters.get("categoryID"), on: req.db).unwrap(or: Abort(.notFound))
+        return reminderFetch.and(categoryFetch).flatMap { reminder, category in
+            reminder.$categories.attach(category, on: req.db).transform(to: .created)
         }
     }
     
-    func getCategoriesHandler(_ req: Request) throws -> Future<[Category]> {
-        return try req.parameters.next(Reminder.self).flatMap(to: [Category].self) { reminder in
-            return try reminder.categories.query(on: req).all()
+    func getCategoriesHandler(req: Request) throws -> EventLoopFuture<[Category]> {
+        Reminder.find(req.parameters.get("reminderID"), on: req.db).unwrap(or: Abort(.notFound)).flatMap { reminder in
+            do {
+                return try reminder.$categories.query(on: req.db).all()
+            } catch {
+                return req.eventLoop.future(error: Abort(.internalServerError))
+            }
         }
     }
 }

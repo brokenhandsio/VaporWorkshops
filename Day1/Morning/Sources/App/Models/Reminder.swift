@@ -1,28 +1,31 @@
-import FluentSQLite
+import Fluent
 import Vapor
 
-final class Reminder: Codable {
-    var id: Int?
-    var title: String
-    var userID: User.ID
+final class Reminder: Model, Content {
+    static let schema = "reminders"
     
-    init(title: String, userID: User.ID) {
+    @ID(key: "id")
+    var id: Int?
+    
+    @Field(key: "title")
+    var title: String
+    
+    @Parent(key: "userID")
+    var user: User
+    
+    @Siblings(through: ReminderCategoryPivot.self, from: \.$reminder, to: \.$category)
+    var categories: [Category]
+    
+    init() {}
+    
+    init(id: Int? = nil, title: String, userID: User.IDValue) {
+        self.id = id
         self.title = title
-        self.userID = userID
+        self.$user.id = userID
     }
 }
 
-extension Reminder: SQLiteModel {}
-extension Reminder: Content {}
-extension Reminder: Migration {}
-extension Reminder: Parameter {}
-
-extension Reminder {
-    var user: Parent<Reminder, User> {
-        return parent(\.userID)
-    }
-    
-    var categories: Siblings<Reminder, Category, ReminderCategoryPivot> {
-        return siblings()
-    }
+struct CreateReminderData: Content {
+    let title: String
+    let userID: User.IDValue
 }
