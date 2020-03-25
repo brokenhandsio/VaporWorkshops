@@ -1,21 +1,21 @@
-import FluentSQLite
+import Fluent
 import Foundation
 
-final class ReminderCategoryPivot: SQLiteUUIDPivot {
+final class ReminderCategoryPivot: Model {
+    static let schema = "reminder+category"
+    
+    @ID(key: .id)
     var id: UUID?
-    var reminderID: Reminder.ID
-    var categoryID: Category.ID
     
-    typealias Left = Reminder
-    typealias Right = Category
-    static let leftIDKey: LeftIDKey = \.reminderID
-    static let rightIDKey: RightIDKey = \.categoryID
+    @Parent(key: "reminder_id")
+    var reminder: Reminder
     
-    init(_ reminder: Reminder, _ category: Category) throws {
-        self.reminderID = try reminder.requireID()
-        self.categoryID = try category.requireID()
+    @Parent(key: "category_id")
+    var category: Category
+    
+    init() {}
+    init(reminderID: Reminder.IDValue, categoryID: Category.IDValue) {
+        self.$reminder.id = reminderID
+        self.$category.id = categoryID
     }
 }
-
-extension ReminderCategoryPivot: ModifiablePivot {}
-extension ReminderCategoryPivot: Migration {}

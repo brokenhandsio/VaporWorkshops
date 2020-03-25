@@ -1,32 +1,26 @@
-# You can set the Swift version to what you need for your app. Versions can be found here: https://hub.docker.com/_/swift
-FROM swift:4.2 as builder
+# ================================
+# Build image
+# ================================
+FROM vapor/swift:5.1 as build
+WORKDIR /build
 
-# For local build, add `--build-arg env=docker`
-# In your application, you can use `Environment.custom(name: "docker")` to check if you're in this env
-ARG env
-
-RUN apt-get -qq update && apt-get -q -y install \
-  tzdata \
-  && rm -r /var/lib/apt/lists/*
-WORKDIR /app
+# Copy entire repo into container
 COPY . .
-RUN mkdir -p /build/lib && cp -R /usr/lib/swift/linux/*.so /build/lib
-RUN swift build -c release && mv `swift build -c release --show-bin-path` /build/bin
 
-# Production image
-FROM ubuntu:16.04
-ARG env
-RUN apt-get -qq update && apt-get install -y \
-  libicu55 libxml2 libbsd0 libcurl3 libatomic1 \
-  tzdata \
-  && rm -r /var/lib/apt/lists/*
-WORKDIR /app
-COPY --from=builder /build/bin/Run .
-COPY --from=builder /build/lib/* /usr/lib/
-# Uncomment the next line if you need to load resources from the `Public` directory
-#COPY --from=builder /app/Public ./Public
-# Uncomment the next line if you are using Leaf
-#COPY --from=builder /app/Resources ./Resources
-ENV ENVIRONMENT=$env
+# Compile with optimizations
+RUN swift build \
+	--enable-test-discovery \
+	-c release
 
-ENTRYPOINT ./Run serve --env $ENVIRONMENT --hostname 0.0.0.0 --port 80
+# ================================
+# Run image
+# ================================
+FROM vapor/ubuntu:18.04
+WORKDIR /run
+
+# Copy build artifacts
+COPY --from=build /build/.build/release /run
+# Copy Swift runtime libraries
+COPY --from=build /usr/lib/swift/ /usr/lib/swift/
+
+ENTRYPOINT ["./Run", "serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "80"]
