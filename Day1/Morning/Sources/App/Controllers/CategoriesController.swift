@@ -26,11 +26,7 @@ struct CategoriesController: RouteCollection {
     
     func getRemindersHandler(req: Request) throws -> EventLoopFuture<[Reminder]> {
         Category.find(req.parameters.get("categoryID"), on: req.db).unwrap(or: Abort(.notFound)).flatMap { category in
-            do {
-                return try category.$reminders.query(on: req.db).all()
-            } catch {
-                return req.eventLoop.future(error: Abort(.internalServerError))
-            }
+            return category.$reminders.query(on: req.db).all()
         }
     }
 }

@@ -47,11 +47,7 @@ struct UserController: RouteCollection {
     
     func getRemindersHandler(req: Request) throws -> EventLoopFuture<[Reminder]> {
         User.find(req.parameters.get("userID"), on: req.db).unwrap(or: Abort(.notFound)).flatMap { user in
-            do {
-                return try user.$reminders.query(on: req.db).all()
-            } catch {
-                return req.eventLoop.future(error: Abort(.internalServerError))
-            }
+            return user.$reminders.query(on: req.db).all()
         }
     }
     

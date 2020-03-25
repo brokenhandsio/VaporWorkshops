@@ -1,15 +1,16 @@
 import Fluent
+import Foundation
 
 final class ReminderCategoryPivot: Model {
     static let schema = "reminder+category"
     
-    @ID(key: "id")
-    var id: Int?
+    @ID(key: .id)
+    var id: UUID?
     
-    @Parent(key: "reminderID")
+    @Parent(key: "reminder_id")
     var reminder: Reminder
     
-    @Parent(key: "categoryID")
+    @Parent(key: "category_id")
     var category: Category
     
     init() {}

@@ -1,10 +1,10 @@
-// swift-tools-version:5.1
+// swift-tools-version:5.2
 import PackageDescription
 
 let package = Package(
     name: "HelloVapor",
     platforms: [
-       .macOS(.v10_14)
+       .macOS(.v10_15)
     ],
     dependencies: [
         // 💧 A server-side Swift web framework.
@@ -14,11 +14,14 @@ let package = Package(
     ],
     targets: [
         .target(name: "App", dependencies: [
-            "Fluent", 
-            "FluentSQLiteDriver",
-            "Vapor"
+            .product(name: "Fluent", package: "fluent"),
+            .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
+            .product(name: "Vapor", package: "vapor")
         ]),
         .target(name: "Run", dependencies: ["App"]),
-        .testTarget(name: "AppTests", dependencies: ["App", "XCTVapor"])
+        .testTarget(name: "AppTests", dependencies: [
+            .target(name: "App"),
+            .product(name: "XCTVapor", package: "vapor")
+        ])
     ]
 )
