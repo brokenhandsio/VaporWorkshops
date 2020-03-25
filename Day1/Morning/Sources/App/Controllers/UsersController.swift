@@ -16,7 +16,7 @@ struct UserController: RouteCollection {
     
     func createHandler(req: Request) throws -> EventLoopFuture<User> {
         let user = try req.content.decode(User.self)
-        return user.save(on: req.db).map { user }
+        return user.save(on: req.db).then { user }
     }
     
     func getAllHandler(req: Request) throws -> EventLoopFuture<[User]> {
@@ -30,7 +30,7 @@ struct UserController: RouteCollection {
     func deleteHandler(req: Request) throws -> EventLoopFuture<HTTPStatus> {
         User.find(req.parameters.get("userID"), on: req.db)
             .unwrap(or: Abort(.notFound))
-            .flatMap { $0.delete(on: req.db) }
+            .then { $0.delete(on: req.db) }
             .transform(to: .ok)
     }
     
@@ -38,20 +38,46 @@ struct UserController: RouteCollection {
         let updatedUser = try req.content.decode(User.self)
         return User.find(req.parameters.get("userID"), on: req.db)
             .unwrap(or: Abort(.notFound))
-            .flatMap { user in
+            .then { user in
                 user.name = updatedUser.name
                 user.username = updatedUser.username
-                return user.save(on: req.db).map { user }
+                return user.save(on: req.db).then { user }
         }
     }
     
     func getRemindersHandler(req: Request) throws -> EventLoopFuture<[Reminder]> {
-        User.find(req.parameters.get("userID"), on: req.db).unwrap(or: Abort(.notFound)).flatMap { user in
+        User.find(req.parameters.get("userID"), on: req.db).unwrap(or: Abort(.notFound)).then { user in
             return user.$reminders.query(on: req.db).all()
         }
     }
     
     func getAllUsersWithRemindersEagerHandler(req: Request) throws -> EventLoopFuture<[User]> {
         User.query(on: req.db).with(\.$reminders).all()
+    }
+    
+    func testTryInMapHandler(_ req: Request) throws -> EventLoopFuture<User> {
+        let updatedUser = try req.content.decode(User.self)
+        return User.find(req.parameters.get("userID"), on: req.db)
+            .unwrap(or: Abort(.notFound))
+            .then { user in
+                user.name = updatedUser.name
+                user.username = updatedUser.username
+                return user.save(on: req.db).then {
+                    try print("User ID is \(user.requireID())")
+                    return user
+                }
+        }
+    }
+    
+    func testTryInFlatMapHandler(_ req: Request) throws -> EventLoopFuture<User> {
+        let updatedUser = try req.content.decode(User.self)
+        return User.find(req.parameters.get("userID"), on: req.db)
+            .unwrap(or: Abort(.notFound))
+            .then { user in
+                user.name = updatedUser.name
+                user.username = updatedUser.username
+                try print("User ID is \(user.requireID())")
+                return user.save(on: req.db).transform(to: user)
+        }
     }
 }

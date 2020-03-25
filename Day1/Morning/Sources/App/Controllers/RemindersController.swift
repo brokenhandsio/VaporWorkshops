@@ -16,7 +16,7 @@ struct RemindersController: RouteCollection {
     func createHandler(req: Request) throws -> EventLoopFuture<Reminder> {
         let reminderData = try req.content.decode(CreateReminderData.self)
         let reminder = Reminder(title: reminderData.title, userID: reminderData.userID)
-        return reminder.save(on: req.db).map { reminder }
+        return reminder.save(on: req.db).then { reminder }
     }
     
     func getAllHandler(req: Request) throws -> EventLoopFuture<[Reminder]> {
@@ -28,7 +28,7 @@ struct RemindersController: RouteCollection {
     }
     
     func getUserHandler(req: Request) throws -> EventLoopFuture<User> {
-        Reminder.find(req.parameters.get("reminderID"), on: req.db).unwrap(or: Abort(.notFound)).flatMap { reminder in
+        Reminder.find(req.parameters.get("reminderID"), on: req.db).unwrap(or: Abort(.notFound)).then { reminder in
             reminder.$user.get(on: req.db)
         }
     }
@@ -36,13 +36,13 @@ struct RemindersController: RouteCollection {
     func addCategoriesHandler(req: Request) throws -> EventLoopFuture<HTTPStatus> {
         let reminderFetch = Reminder.find(req.parameters.get("reminderID"), on: req.db).unwrap(or: Abort(.notFound))
         let categoryFetch = Category.find(req.parameters.get("categoryID"), on: req.db).unwrap(or: Abort(.notFound))
-        return reminderFetch.and(categoryFetch).flatMap { reminder, category in
+        return reminderFetch.and(categoryFetch).then { reminder, category in
             reminder.$categories.attach(category, on: req.db).transform(to: .created)
         }
     }
     
     func getCategoriesHandler(req: Request) throws -> EventLoopFuture<[Category]> {
-        Reminder.find(req.parameters.get("reminderID"), on: req.db).unwrap(or: Abort(.notFound)).flatMap { reminder in
+        Reminder.find(req.parameters.get("reminderID"), on: req.db).unwrap(or: Abort(.notFound)).then { reminder in
             return reminder.$categories.query(on: req.db).all()
         }
     }

@@ -13,7 +13,7 @@ struct CategoriesController: RouteCollection {
     
     func createHandler(req: Request) throws -> EventLoopFuture<Category> {
         let category = try req.content.decode(Category.self)
-        return category.save(on: req.db).map { category }
+        return category.save(on: req.db).then { category }
     }
     
     func getAllHandler(req: Request) throws -> EventLoopFuture<[Category]> {
@@ -25,7 +25,7 @@ struct CategoriesController: RouteCollection {
     }
     
     func getRemindersHandler(req: Request) throws -> EventLoopFuture<[Reminder]> {
-        Category.find(req.parameters.get("categoryID"), on: req.db).unwrap(or: Abort(.notFound)).flatMap { category in
+        Category.find(req.parameters.get("categoryID"), on: req.db).unwrap(or: Abort(.notFound)).then { category in
             return category.$reminders.query(on: req.db).all()
         }
     }
