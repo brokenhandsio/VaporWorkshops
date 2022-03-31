@@ -1,48 +1,57 @@
 import Vapor
+import Fluent
 
-struct UsersController: RouteCollection {
-    func boot(router: Router) throws {
-        // ...
-        router.post("api", "users", use: createHandler)
-        let usersRoute = router.grouped("api", "users")
-        usersRoute.post(use: createHandler)
-        usersRoute.get(use: getAllHandler)
-        usersRoute.get(User.parameter, use: getHandler)
-        usersRoute.delete(User.parameter, use: deleteHandler)
-        usersRoute.put(User.self, at: User.parameter, use: updateHandler)
-        usersRoute.get(User.parameter, "reminders", use: getRemindersHandler)
+struct UserController: RouteCollection {
+    
+    func boot(routes: RoutesBuilder) throws {
+        let usersRoutes = routes.grouped("api", "users")
+        usersRoutes.post(use: createHandler)
+        usersRoutes.get(use: getAllHandler)
+        usersRoutes.get(":userID", use: getHandler)
+        usersRoutes.delete(":userID", use: deleteHandler)
+        usersRoutes.put(":userID", use: updateHandler)
+        usersRoutes.get(":userID", "reminders", use: getRemindersHandler)
+        usersRoutes.get("reminders", use: getAllUsersWithRemindersEagerHandler)
     }
     
-    func createHandler(_ req: Request) throws -> Future<User> {
-        return try req.content.decode(User.self).flatMap(to: User.self) { user in
-            return user.save(on: req)
+    func createHandler(req: Request) throws -> EventLoopFuture<User> {
+        let user = try req.content.decode(User.self)
+        return user.save(on: req.db).map { user }
+    }
+    
+    func getAllHandler(req: Request) throws -> EventLoopFuture<[User]> {
+        User.query(on: req.db).all()
+    }
+    
+    func getHandler(req: Request) throws -> EventLoopFuture<User> {
+        User.find(req.parameters.get("userID"), on: req.db).unwrap(or: Abort(.notFound))
+    }
+    
+    func deleteHandler(req: Request) throws -> EventLoopFuture<HTTPStatus> {
+        User.find(req.parameters.get("userID"), on: req.db)
+            .unwrap(or: Abort(.notFound))
+            .flatMap { $0.delete(on: req.db) }
+            .transform(to: .ok)
+    }
+    
+    func updateHandler(req: Request) throws -> EventLoopFuture<User> {
+        let updatedUser = try req.content.decode(User.self)
+        return User.find(req.parameters.get("userID"), on: req.db)
+            .unwrap(or: Abort(.notFound))
+            .flatMap { user in
+                user.name = updatedUser.name
+                user.username = updatedUser.username
+                return user.save(on: req.db).map { user }
         }
     }
     
-    func getAllHandler(_ req: Request) throws -> Future<[User]> {
-        return User.query(on: req).all()
-    }
-    
-    func getHandler(_ req: Request) throws -> Future<User> {
-        return try req.parameters.next(User.self)
-    }
-    
-    func updateHandler(_ req: Request, updatedUser: User) throws -> Future<User> {
-        return try req.parameters.next(User.self).flatMap(to: User.self) { user in
-            user.name = updatedUser.name
-            user.username = updatedUser.username
-            return user.save(on: req)
+    func getRemindersHandler(req: Request) throws -> EventLoopFuture<[Reminder]> {
+        User.find(req.parameters.get("userID"), on: req.db).unwrap(or: Abort(.notFound)).flatMap { user in
+            return user.$reminders.query(on: req.db).all()
         }
     }
     
-    func deleteHandler(_ req: Request) throws -> Future<HTTPStatus> {
-        let user = try req.parameters.next(User.self)
-        return user.delete(on: req).transform(to: .noContent)
-    }
-    
-    func getRemindersHandler(_ req: Request) throws -> Future<[Reminder]> {
-        return try req.parameters.next(User.self).flatMap(to: [Reminder].self) { user in
-            return try user.reminders.query(on: req).all()
-        }
+    func getAllUsersWithRemindersEagerHandler(req: Request) throws -> EventLoopFuture<[User]> {
+        User.query(on: req.db).with(\.$reminders).all()
     }
 }
