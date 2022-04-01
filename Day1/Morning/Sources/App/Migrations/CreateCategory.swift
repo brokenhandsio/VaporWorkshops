@@ -1,15 +1,14 @@
 import Fluent
 
-struct CreateCategory: Migration {
-    func prepare(on database: Database) -> EventLoopFuture<Void> {
-        database.schema("categories")
-            .id()
+struct CreateCategory: AsyncMigration {
+    func prepare(on database: Database) async throws {
+        try await database.schema("categories")
+            .field("id", .int, .identifier(auto: true))
             .field("name", .string, .required)
-            .create()
+           .create()
     }
     
-    func revert(on database: Database) -> EventLoopFuture<Void> {
-        database.schema(Category.schema).delete()
+    func revert(on database: Database) async throws {
+        try await database.schema("categories").delete()
     }
 }
-

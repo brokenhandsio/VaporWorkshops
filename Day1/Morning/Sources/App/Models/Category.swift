@@ -4,13 +4,14 @@ import Vapor
 final class Category: Model, Content {
     static let schema = "categories"
     
-    @ID(key: .id)
+    @ID
     var id: UUID?
     
     @Field(key: "name")
     var name: String
     
-    @Siblings(through: ReminderCategoryPivot.self, from: \.$category, to: \.$reminder)
+    @Siblings(through: ReminderCategoryPivot.self,
+              from: \.$category, to: \.$reminder)
     var reminders: [Reminder]
     
     init() {}

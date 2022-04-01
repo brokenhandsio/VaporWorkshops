@@ -4,7 +4,7 @@ import Vapor
 final class User: Model, Content {
     static let schema = "users"
     
-    @ID(key: .id)
+    @ID
     var id: UUID?
     
     @Field(key: "name")
@@ -15,7 +15,7 @@ final class User: Model, Content {
     
     @Children(for: \.$user)
     var reminders: [Reminder]
-    
+   
     init() {}
     
     init(id: UUID? = nil, name: String, username: String) {
@@ -23,5 +23,4 @@ final class User: Model, Content {
         self.name = name
         self.username = username
     }
-    
 }

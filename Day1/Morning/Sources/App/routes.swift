@@ -14,43 +14,27 @@ func routes(_ app: Application) throws {
         return "Hello Vapor Workshop!"
     }
     
-    app.get("bottles", ":count") { req -> String in
-        guard let count = req.parameters.get("count", as: Int.self) else {
-            throw Abort(.badRequest)
-        }
-        return "There were \(count) bottles on the wall"
+    app.get("bottles", ":count") { req -> Bottles in
+      let count = try req.parameters.require("count", as: Int.self)
+      return Bottles(count: count)
     }
     
     app.get("hello", ":name") { req -> String in
-        guard let name = req.parameters.get("name") else {
-            throw Abort(.notFound)
-        }
+        let name = try req.parameters.require("name")
         return "Hello \(name)"
     }
     
-    app.get("bottles", "json", ":count") { req -> Bottles in
-        guard let count = req.parameters.get("count", as: Int.self) else {
-            throw Abort(.badRequest)
-        }
-        return Bottles(count: count)
-    }
-    
-    app.post("bottles", "json") { req -> String in
+    app.post("bottles") { req -> String in
         let bottles = try req.content.decode(Bottles.self)
         return "There were \(bottles.count) bottles"
     }
-    
+
     app.post("user-info") { req -> UserMessage in
         let userInfo = try req.content.decode(UserInfo.self)
         let message = "Hello \(userInfo.name), you are \(userInfo.age)"
         return UserMessage(message: message)
     }
 
-    let todoController = TodoController()
-    app.get("todos", use: todoController.index)
-    app.post("todos", use: todoController.create)
-    app.delete("todos", ":todoID", use: todoController.delete)
-    
     try app.register(collection: UserController())
     try app.register(collection: RemindersController())
     try app.register(collection: CategoriesController())

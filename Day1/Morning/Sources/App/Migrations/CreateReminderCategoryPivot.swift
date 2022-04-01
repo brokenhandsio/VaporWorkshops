@@ -1,15 +1,15 @@
 import Fluent
 
-struct CreateReminderCategoryPivot: Migration {
-    func prepare(on database: Database) -> EventLoopFuture<Void> {
-        database.schema("reminder+category")
+struct CreateReminderCategoryPivot: AsyncMigration {
+    func prepare(on database: Database) async throws {
+        try await database.schema("reminder+category")
             .id()
-            .field("reminder_id", .uuid, .required)
-            .field("category_id", .uuid, .required)
+            .field("reminderID", .int, .required)
+            .field("categoryID", .int, .required)
             .create()
     }
     
-    func revert(on database: Database) -> EventLoopFuture<Void> {
-        database.schema(ReminderCategoryPivot.schema).delete()
+    func revert(on database: Database) async throws {
+        try await database.schema("reminder+category").delete()
     }
 }

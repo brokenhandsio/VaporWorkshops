@@ -1,15 +1,16 @@
 import Fluent
 
-struct CreateReminder: Migration {
-    func prepare(on database: Database) -> EventLoopFuture<Void> {
-        database.schema("reminders")
+struct CreateReminder: AsyncMigration {
+    func prepare(on database: Database) async throws {
+        try await database.schema("reminders")
             .id()
             .field("title", .string, .required)
-            .field("user_id", .uuid, .required)
+            .field("userID", .uuid, .required,
+                   .references("users", "id"))
             .create()
     }
     
-    func revert(on database: Database) -> EventLoopFuture<Void> {
-        database.schema("reminders").delete()
+    func revert(on database: Database) async throws {
+        try await database.schema("reminders").delete()
     }
 }
