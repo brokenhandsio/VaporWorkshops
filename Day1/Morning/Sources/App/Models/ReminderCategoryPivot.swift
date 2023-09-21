@@ -3,7 +3,7 @@ import Fluent
 final class ReminderCategoryPivot: Model {
     static let schema = "reminder+category"
     
-    @ID(key: "id")
+    @ID
     var id: UUID?
     
     @Parent(key: "reminderID")

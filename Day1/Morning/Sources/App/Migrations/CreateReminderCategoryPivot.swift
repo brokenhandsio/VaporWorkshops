@@ -4,8 +4,8 @@ struct CreateReminderCategoryPivot: AsyncMigration {
     func prepare(on database: Database) async throws {
         try await database.schema("reminder+category")
             .id()
-            .field("reminderID", .int, .required)
-            .field("categoryID", .int, .required)
+            .field("reminderID", .uuid, .required, .references("reminders", "id", onDelete: .cascade))
+            .field("categoryID", .int, .required, .references("categories", "id", onDelete: .cascade))
             .create()
     }
     

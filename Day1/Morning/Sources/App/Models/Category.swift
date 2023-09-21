@@ -4,8 +4,8 @@ import Vapor
 final class Category: Model, Content {
     static let schema = "categories"
     
-    @ID
-    var id: UUID?
+    @ID(custom: "id")
+    var id: Int?
     
     @Field(key: "name")
     var name: String
@@ -16,7 +16,7 @@ final class Category: Model, Content {
     
     init() {}
     
-    init(id: UUID? = nil, name: String) {
+    init(id: Int? = nil, name: String) {
         self.id = id
         self.name = name
     }
