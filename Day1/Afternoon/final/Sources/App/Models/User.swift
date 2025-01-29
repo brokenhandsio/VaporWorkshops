@@ -1,51 +1,48 @@
-import FluentSQLite
+import Fluent
 import Vapor
-import Authentication
 
-final class User: Codable {
-    var id: Int?
-    var name: String
-    var username: String
-    var password: String
+final class User: Model, Content, @unchecked Sendable {
+    static let schema = "users"
     
-    init(name: String, username: String, password: String) {
+    @ID
+    var id: UUID?
+    
+    @Field(key: "name")
+    var name: String
+    
+    @Field(key: "username")
+    var username: String
+    
+    @Children(for: \.$user)
+    var reminders: [Reminder]
+
+    @Field(key: "passwordHash")
+    var passwordHash: String
+
+    init() {}
+    
+    init(id: UUID? = nil, name: String, username: String, passwordHash: String) {
+        self.id = id
         self.name = name
         self.username = username
-        self.password = password
+        self.passwordHash = passwordHash
     }
 }
 
-extension User: SQLiteModel {}
-extension User: Content {}
-extension User: Migration {}
-extension User: Parameter {}
+extension User: ModelAuthenticatable {
+    static let usernameKey = \User.$username
+    static let passwordHashKey = \User.$passwordHash
+
+    func verify(password: String) throws -> Bool {
+        try Bcrypt.verify(password, created: self.passwordHash)
+    }
+}
 
 extension User {
-    var reminders: Children<User, Reminder> {
-        return children(\.userID)
+    func generateToken() throws -> Token {
+        try .init(
+            value: [UInt8].random(count: 32).base64,
+            userID: self.requireID()
+        )
     }
-}
-
-extension User: BasicAuthenticatable {
-    static let usernameKey: UsernameKey = \.username
-    static let passwordKey: PasswordKey = \.password
-}
-
-struct CreateDefaultUser: SQLiteMigration {
-    static func prepare(on conn: SQLiteConnection) -> EventLoopFuture<Void> {
-        let password = try? BCrypt.hash("password")
-        guard let hashedPassword = password else {
-            fatalError("Failed to hash password for default user")
-        }
-        let user = User(name: "Default", username: "default", password: hashedPassword)
-        return user.save(on: conn).transform(to: ())
-    }
-    
-    static func revert(on conn: SQLiteConnection) -> EventLoopFuture<Void> {
-        return .done(on: conn)
-    }
-}
-
-extension User: TokenAuthenticatable {
-    typealias TokenType = Token
 }

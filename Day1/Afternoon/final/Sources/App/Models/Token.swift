@@ -1,35 +1,38 @@
-import Foundation
+import Fluent
 import Vapor
-import FluentSQLite
-import Authentication
 
-final class Token: Codable {
+final class Token: Model, Content, @unchecked Sendable {
+    static let schema = "tokens"
+
+    @ID(key: .id)
     var id: UUID?
-    var token: String
-    var userID: User.ID
-    
-    init(token: String, userID: User.ID) {
-        self.token = token
-        self.userID = userID
+
+    @Field(key: "token_value")
+    var value: String
+
+    @Parent(key: "user_id")
+    var user: User
+
+    @Field(key: "expires_at")
+    var expiresAt: Date
+
+    init() { }
+
+    init(id: UUID? = nil, value: String, userID: User.IDValue) {
+        self.id = id
+        self.value = value
+        self.$user.id = userID
+        // Set expirty to 30 days
+        self.expiresAt = Date().advanced(by: 60 * 60 * 24 * 30)
     }
 }
 
-extension Token: SQLiteUUIDModel {}
-extension Token: Migration {}
-extension Token: Content {}
+extension Token: ModelTokenAuthenticatable {
+    typealias User = App.User
+    static let valueKey = \Token.$value
+    static let userKey = \Token.$user
 
-extension Token {
-    static func generate(for user: User, on req: Request) throws -> Token {
-        let random = try CryptoRandom().generateData(count: 32).base64EncodedString()
-        return try Token(token: random, userID: user.requireID())
+    var isValid: Bool {
+        self.expiresAt > Date()
     }
-}
-
-extension Token: Authentication.Token {
-    static let userIDKey: UserIDKey = \Token.userID
-    typealias UserType = User
-}
-
-extension Token: BearerAuthenticatable {
-    static let tokenKey: TokenKey = \Token.token
 }

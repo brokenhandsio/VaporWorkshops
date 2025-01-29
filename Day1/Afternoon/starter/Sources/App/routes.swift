@@ -1,70 +1,54 @@
+import Fluent
 import Vapor
 
-/// Register your application's routes here.
-public func routes(_ router: Router) throws {
-    // Basic "It works" example
-    router.get { req in
+func routes(_ app: Application) throws {
+    app.get { req in
         return "It works!"
     }
-    
-    // Basic "Hello, world!" example
-    router.get("hello") { req in
+
+    app.get("hello") { req -> String in
         return "Hello, world!"
     }
     
-    // Example of configuring a controller
-    let todoController = TodoController()
-    router.get("todos", use: todoController.index)
-    router.post("todos", use: todoController.create)
-    router.delete("todos", Todo.parameter, use: todoController.delete)
-    
-    router.get("hello", "workshop") { req in
+    app.get("hello", "workshop") { req in
         return "Hello Vapor Workshop!"
     }
     
-    router.get("bottles", Int.parameter) { req -> String in
-        let count = try req.parameters.next(Int.self)
-        return "There were \(count) bottles on the wall"
+    app.get("bottles", ":count") { req -> Bottles in
+      let count = try req.parameters.require("count", as: Int.self)
+      return Bottles(count: count)
     }
     
-    router.get("hello", String.parameter) { req -> String in
-        let name = try req.parameters.next(String.self)
+    app.get("hello", ":name") { req -> String in
+        let name = try req.parameters.require("name")
         return "Hello \(name)"
     }
     
-    router.get("bottles", Int.parameter) { req -> Bottles in
-        let count = try req.parameters.next(Int.self)
-        return Bottles(count: count)
-    }
-    
-    router.post(Bottles.self, at: "bottles") { req, bottles -> String in
+    app.post("bottles") { req -> String in
+        let bottles = try req.content.decode(Bottles.self)
         return "There were \(bottles.count) bottles"
     }
-    
-    router.post(UserInfoData.self, at: "user-info") { req, data -> UserInfo in
-        let message = "Hello \(data.name), you are \(data.age)"
-        return UserInfo(message: message)
+
+    app.post("user-info") { req -> UserMessage in
+        let userInfo = try req.content.decode(UserInfo.self)
+        let message = "Hello \(userInfo.name), you are \(userInfo.age)"
+        return UserMessage(message: message)
     }
-    
-    let usersController = UsersController()
-    try router.register(collection: usersController)
-    
-    let remindersController = RemindersController()
-    try router.register(collection: remindersController)
-    
-    let categoriesController = CategoriesController()
-    try router.register(collection: categoriesController)
+
+    try app.register(collection: UserController())
+    try app.register(collection: RemindersController())
+    try app.register(collection: CategoriesController())
 }
 
 struct Bottles: Content {
     let count: Int
 }
 
-struct UserInfoData: Content {
+struct UserInfo: Content {
     let name: String
     let age: Int
 }
 
-struct UserInfo: Content {
+struct UserMessage: Content {
     let message: String
 }
