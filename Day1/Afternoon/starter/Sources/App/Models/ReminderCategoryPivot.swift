@@ -1,6 +1,7 @@
 import Fluent
+import Foundation
 
-final class ReminderCategoryPivot: Model {
+final class ReminderCategoryPivot: Model, @unchecked Sendable {
     static let schema = "reminder+category"
     
     @ID

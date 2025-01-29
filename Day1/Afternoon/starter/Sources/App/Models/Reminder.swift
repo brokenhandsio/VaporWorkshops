@@ -1,7 +1,7 @@
 import Fluent
 import Vapor
 
-final class Reminder: Model, Content {
+final class Reminder: Model, Content, @unchecked Sendable {
     static let schema = "reminders"
     
     @ID
